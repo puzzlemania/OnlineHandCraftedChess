@@ -15,6 +15,7 @@ const DragDrop = (() => {
         if(Game.isGameOver()||!Turn.isPlayersTurn(army))return;
         dragPiece=piece; sourceCell=piece.parentElement;
         Rules.preparePiece(piece,sourceCell);
+        if (piece.setPointerCapture) { try { piece.setPointerCapture(event.pointerId); } catch (_) {} }
         document.body.appendChild(piece); Board.updateOccupied(sourceCell); beginDrag(event);
     }
     function beginDrag(event){
@@ -34,15 +35,38 @@ const DragDrop = (() => {
             zIndex:'10000',
             pointerEvents:'none'
         });
-        window.addEventListener('pointermove',pointerMove);window.addEventListener('pointerup',pointerUp);
+        window.addEventListener('pointermove',pointerMove,{passive:false});window.addEventListener('pointerup',pointerUp,{passive:false});window.addEventListener('pointercancel',pointerCancel,{passive:false});
     }
-    function pointerMove(event){if(!dragging)return;dragPiece.style.left=(event.clientX-offsetX)+'px';dragPiece.style.top=(event.clientY-offsetY)+'px';currentCell=Board.getCellFromPoint(event.clientX,event.clientY);Board.highlight(currentCell);}
+    function pointerMove(event){
+        if(!dragging)return;
+        event.preventDefault();
+        dragPiece.style.left=(event.clientX-offsetX)+'px';
+        dragPiece.style.top=(event.clientY-offsetY)+'px';
+        currentCell=Board.getCellFromPoint(event.clientX,event.clientY);
+        Board.highlight(currentCell);
+    }
     async function pointerUp(event){
-        if(!dragging)return; dragging=false; window.removeEventListener('pointermove',pointerMove);window.removeEventListener('pointerup',pointerUp);Board.clearHighlight();
+        if(!dragging)return;
+        event.preventDefault();
+        dragging=false;
+        window.removeEventListener('pointermove',pointerMove);
+        window.removeEventListener('pointerup',pointerUp);
+        window.removeEventListener('pointercancel',pointerCancel);
+        Board.clearHighlight();
         currentCell=Board.getCellFromPoint(event.clientX,event.clientY);
         if(!currentCell){cancelDrag();return;}
         if(!Rules.canMove(dragPiece,sourceCell,currentCell)){cancelDrag();return;}
         await completeDrop(currentCell);
+    }
+    function pointerCancel(event){
+        if(!dragging)return;
+        event.preventDefault();
+        dragging=false;
+        window.removeEventListener('pointermove',pointerMove);
+        window.removeEventListener('pointerup',pointerUp);
+        window.removeEventListener('pointercancel',pointerCancel);
+        Board.clearHighlight();
+        cancelDrag();
     }
     async function completeDrop(cell){
         const army=dragPiece.dataset.army, originalType=dragPiece.dataset.type;

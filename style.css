@@ -517,3 +517,97 @@ body{
 .promotionChoice span{font-size:11px;}
 
 .activeTurn{box-shadow:0 0 18px rgba(96,255,174,.45), inset 0 0 10px rgba(96,255,174,.12);}
+
+/*=========================================================
+ Mobile & Tablet Layout
+ On touch devices the side palettes are intentionally hidden
+ so the complete 8x8 board remains visible and centered.
+=========================================================*/
+@media (max-width:1000px){
+    html, body{
+        overflow:hidden;
+        width:100%;
+        height:100%;
+        touch-action:none;
+    }
+
+    #gameContainer{
+        width:100vw;
+        height:100dvh;
+        min-height:100vh;
+        padding:8px;
+        margin:0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:0;
+    }
+
+    #orangePanel,
+    #bluePanel{
+        display:none;
+    }
+
+    #boardContainer{
+        width:min(96vw, calc(100dvh - 30px));
+        height:auto;
+        max-width:96vw;
+        max-height:96vw;
+        margin:0 auto;
+    }
+
+    #boardOverlay,
+    #boardContainer{
+        touch-action:none;
+    }
+
+    .board-piece{
+        touch-action:none;
+        -webkit-touch-callout:none;
+    }
+
+    #gameControls{
+        left:50%;
+        bottom:4px;
+        max-width:calc(100vw - 12px);
+        width:max-content;
+        gap:4px;
+        padding:4px 6px;
+        font-size:10px;
+    }
+
+    #gameControls label{gap:2px;}
+    #gameControls select,
+    #gameControls button{
+        padding:3px 4px;
+        font-size:10px;
+    }
+    #gameStatus{min-width:105px;}
+}
+
+@media (max-width:600px){
+    #gameContainer{
+        padding:4px;
+    }
+
+    #boardContainer{
+        width:min(98vw, calc(100dvh - 26px));
+        max-width:98vw;
+    }
+
+    #gameControls{
+        bottom:2px;
+        gap:2px;
+        padding:3px 4px;
+        font-size:9px;
+        border-width:1px;
+    }
+
+    #gameControls label{gap:1px;}
+    #gameControls select,
+    #gameControls button{
+        padding:2px 3px;
+        font-size:9px;
+    }
+    #gameStatus{min-width:78px;}
+}
