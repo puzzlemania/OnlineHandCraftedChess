@@ -1,0 +1,76 @@
+/*
+=========================================================
+ Ancient Hindu Chess - dragdrop.js
+ Only board pieces are draggable. Valid moves include
+ castling, en passant and pawn promotion.
+=========================================================
+*/
+const DragDrop = (() => {
+    let dragging=false, dragPiece=null, sourceCell=null, currentCell=null, offsetX=0, offsetY=0;
+    function init(){ document.querySelectorAll('.board-piece').forEach(attachBoardPiece); }
+    function attachBoardPiece(piece){ if(piece.dataset.dragAttached==='true')return; piece.dataset.dragAttached='true'; piece.addEventListener('pointerdown',startBoardDrag); }
+    function startBoardDrag(event){
+        event.preventDefault();
+        const piece=event.currentTarget, army=piece.dataset.army;
+        if(Game.isGameOver()||!Turn.isPlayersTurn(army))return;
+        dragPiece=piece; sourceCell=piece.parentElement;
+        Rules.preparePiece(piece,sourceCell);
+        document.body.appendChild(piece); Board.updateOccupied(sourceCell); beginDrag(event);
+    }
+    function beginDrag(event){
+        dragging=true;dragPiece.classList.add('dragging');
+        const rect=dragPiece.getBoundingClientRect();
+        const dragWidth=rect.width/3;
+        const dragHeight=rect.height/3;
+        // Keep the much smaller drag image centered under the pointer.
+        offsetX=dragWidth/2;
+        offsetY=dragHeight/2;
+        Object.assign(dragPiece.style,{
+            position:'fixed',
+            left:(event.clientX-offsetX)+'px',
+            top:(event.clientY-offsetY)+'px',
+            width:dragWidth+'px',
+            height:dragHeight+'px',
+            zIndex:'10000',
+            pointerEvents:'none'
+        });
+        window.addEventListener('pointermove',pointerMove);window.addEventListener('pointerup',pointerUp);
+    }
+    function pointerMove(event){if(!dragging)return;dragPiece.style.left=(event.clientX-offsetX)+'px';dragPiece.style.top=(event.clientY-offsetY)+'px';currentCell=Board.getCellFromPoint(event.clientX,event.clientY);Board.highlight(currentCell);}
+    async function pointerUp(event){
+        if(!dragging)return; dragging=false; window.removeEventListener('pointermove',pointerMove);window.removeEventListener('pointerup',pointerUp);Board.clearHighlight();
+        currentCell=Board.getCellFromPoint(event.clientX,event.clientY);
+        if(!currentCell){cancelDrag();return;}
+        if(!Rules.canMove(dragPiece,sourceCell,currentCell)){cancelDrag();return;}
+        await completeDrop(currentCell);
+    }
+    async function completeDrop(cell){
+        const army=dragPiece.dataset.army, originalType=dragPiece.dataset.type;
+        const fromRow=Number(sourceCell.dataset.row),fromCol=Number(sourceCell.dataset.col),toRow=Number(cell.dataset.row),toCol=Number(cell.dataset.col);
+        const isCastle=Game.isCastlingMove(dragPiece,sourceCell,cell);
+        const isEP=Rules.isEnPassant(dragPiece,sourceCell,cell);
+        const doublePawn=originalType==='pawn'&&Math.abs(toRow-fromRow)===2;
+        if(isCastle){
+            if(!Game.performCastling(dragPiece,sourceCell,cell)){cancelDrag();return;}
+        }else if(isEP){
+            if(!Game.performEnPassant(dragPiece,sourceCell,cell)){cancelDrag();return;}
+        }else{
+            Game.movePiece(dragPiece,sourceCell,cell);
+        }
+        dragPiece.dataset.moved='true';
+        if(originalType==='pawn'){
+            if(!dragPiece.dataset.startRow)dragPiece.dataset.startRow=String(fromRow);
+            if(Game.isPromotionRow(army,toRow)){
+                resetPieceStyle(); Board.updateOccupied(cell); dragPiece.classList.remove('dragging');
+                const choice=await Game.requestPromotion(dragPiece,cell); Game.promotePawn(dragPiece,cell,choice);
+            }
+        }
+        Board.updateOccupied(sourceCell);Board.updateOccupied(cell);dragPiece.classList.remove('dragging');resetPieceStyle();attachBoardPiece(dragPiece);
+        Game.finalizeMove({army,type:originalType,fromRow,fromCol,toRow,toCol,doublePawn,promotion:dragPiece.dataset.promoted?dragPiece.dataset.type:null});
+        cleanup();
+    }
+    function cancelDrag(){if(sourceCell){sourceCell.appendChild(dragPiece);Board.updateOccupied(sourceCell);dragPiece.classList.remove('dragging');resetPieceStyle();}else if(dragPiece)dragPiece.remove();cleanup();}
+    function resetPieceStyle(){if(!dragPiece)return;Object.assign(dragPiece.style,{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%, -50%)',width:'88%',height:'88%',zIndex:'',pointerEvents:'auto'});}
+    function cleanup(){dragPiece=null;sourceCell=null;currentCell=null;}
+    return {init,attachBoardPiece};
+})();
