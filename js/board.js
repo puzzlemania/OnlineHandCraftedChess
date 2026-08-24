@@ -32,9 +32,27 @@ const Board = (() => {
     }
 
     function getCellFromPoint(x, y) {
+        // Resolve the cell from its CURRENT visual bounding rectangle.
+        // This remains correct after responsive resizing and after the
+        // board is rotated for Player vs Computer orientation.
+        //
+        // We intentionally do not calculate row/column from a cached
+        // board size: on tablets, especially after switching between
+        // portrait and landscape, that can leave stale coordinates.
+        for (const cell of cells) {
+            const rect = cell.getBoundingClientRect();
+            if (
+                x >= rect.left && x <= rect.right &&
+                y >= rect.top && y <= rect.bottom
+            ) {
+                return cell;
+            }
+        }
+
+        // Fallback for browsers whose transformed element hit-testing
+        // behaves differently while a pointer is being captured.
         const element = document.elementFromPoint(x, y);
-        if (!element) return null;
-        return element.closest(".cell");
+        return element ? element.closest(".cell") : null;
     }
 
     function highlight(cell) {

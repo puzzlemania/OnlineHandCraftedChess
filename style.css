@@ -184,6 +184,21 @@ body{
 }
 
 /*=========================================================
+    Player vs Computer Board Orientation
+    When the human is Blue, Blue is visually placed at the
+    bottom of the board. The game data itself is unchanged.
+=========================================================*/
+
+#boardContainer.humanBlueOrientation{
+    transform:rotate(180deg);
+    transform-origin:center center;
+}
+
+#boardContainer.humanBlueOrientation .board-piece{
+    transform:translate(-50%,-50%) rotate(180deg);
+}
+
+/*=========================================================
     Board Image
 =========================================================*/
 

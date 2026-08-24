@@ -4,12 +4,34 @@
 =========================================================*/
 const GameUI = (() => {
     let computerEnabled=false, computerArmy='orange', depth=2, thinking=false;
+    function updateBoardOrientation(){
+        const board = document.getElementById('boardContainer');
+        if(!board) return;
+
+        // In Player vs Computer mode the human player's army is placed
+        // at the bottom of the board. The underlying row/column data is
+        // never changed; only the visual board is rotated.
+        const humanIsBlue = computerEnabled && computerArmy === 'orange';
+        board.classList.toggle('humanBlueOrientation', humanIsBlue);
+    }
+
     function init(){
         const mode=document.getElementById('gameMode'), army=document.getElementById('computerArmy'), level=document.getElementById('engineLevel'), reset=document.getElementById('resetGame');
-        mode.addEventListener('change',()=>{computerEnabled=mode.value==='computer'; updateStatus(); maybeComputerTurn();});
-        army.addEventListener('change',()=>{computerArmy=army.value; updateStatus(); resetGame();});
+        mode.addEventListener('change',()=>{
+            computerEnabled=mode.value==='computer';
+            updateBoardOrientation();
+            updateStatus();
+            maybeComputerTurn();
+        });
+        army.addEventListener('change',()=>{
+            computerArmy=army.value;
+            updateBoardOrientation();
+            updateStatus();
+            resetGame();
+        });
         level.addEventListener('change',()=>{depth=Number(level.value);});
         reset.addEventListener('click',resetGame);
+        updateBoardOrientation();
         updateStatus();
     }
     function setStatus(text){const el=document.getElementById('gameStatus');if(el)el.textContent=text;}
