@@ -3,12 +3,12 @@
  Controls for human/computer play and game status.
 =========================================================*/
 const GameUI = (() => {
-    let computerEnabled=false, computerArmy='orange', depth=3, thinking=false;
+    let computerEnabled=false, computerArmy='orange', depth=4, thinking=false;
     function init(){
         const mode=document.getElementById('gameMode'), army=document.getElementById('computerArmy'), level=document.getElementById('engineLevel'), reset=document.getElementById('resetGame');
         mode.addEventListener('change',()=>{computerEnabled=mode.value==='computer'; updatePerspective(); updateStatus(); maybeComputerTurn();});
         army.addEventListener('change',()=>{computerArmy=army.value; updatePerspective(); updateStatus(); resetGame();});
-        level.addEventListener('change',()=>{depth={1:2,2:3,3:4}[Number(level.value)]||3;});
+        level.addEventListener('change',()=>{depth={1:4,2:5,3:6}[Number(level.value)]||4;});
         reset.addEventListener('click',resetGame);
         updatePerspective(); updateStatus();
     }

@@ -32,7 +32,9 @@ const DragDrop = (() => {
             top:(event.clientY-offsetY)+'px',
             width:dragWidth+'px',
             height:dragHeight+'px',
-            transform:flipped?'rotate(180deg)':'none',
+            // The piece is temporarily moved to <body>, outside the flipped board.
+            // Therefore it must NOT inherit the board's 180° counter-rotation while dragging.
+            transform:'none',
             zIndex:'10000',
             pointerEvents:'none'
         });
