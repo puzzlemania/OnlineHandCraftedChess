@@ -153,23 +153,7 @@ const Engine = (() => {
 
         return score;
     }
-    let transposition = new Map();
-
-    function stateKey(s, depth, root){
-        let boardKey='';
-        for(let r=0;r<8;r++)for(let c=0;c<8;c++){
-            const p=s.board[r][c];
-            boardKey += p ? (p.army[0]+p.type[0]+(p.moved?'1':'0')+(p.direction??'x')+(p.startRow??'x')) : '-';
-        }
-        const l=s.last;
-        const lastKey=l ? `${l.army[0]}${l.type[0]}${l.fromRow}${l.fromCol}${l.toRow}${l.toCol}${l.doublePawn?'1':'0'}` : '-';
-        return `${root}|${s.turn}|${depth}|${boardKey}|${lastKey}`;
-    }
-
     function minimax(s,depth,alpha,beta,root){
-        const key=stateKey(s,depth,root);
-        const cached=transposition.get(key);
-        if(cached!==undefined) return cached;
         let moves=legalMoves(s,s.turn);
         if(depth===0||moves.length===0){
             if(moves.length===0){
@@ -194,31 +178,11 @@ const Engine = (() => {
         });
 
         const maximizing=s.turn===root; let best=maximizing?-Infinity:Infinity;
-        let cutoff=false;
-        for(const m of moves){
-            const n=apply(s,m),v=minimax(n,depth-1,alpha,beta,root);
-            if(maximizing){best=Math.max(best,v);alpha=Math.max(alpha,v);}
-            else{best=Math.min(best,v);beta=Math.min(beta,v);}
-            if(beta<=alpha){cutoff=true;break;}
-        }
-        // Only cache fully searched nodes. A cut-off value is a bound, not
-        // necessarily the exact minimax score.
-        if(!cutoff) transposition.set(key,best);
-        return best;
+        for(const m of moves){const n=apply(s,m),v=minimax(n,depth-1,alpha,beta,root);if(maximizing){best=Math.max(best,v);alpha=Math.max(alpha,v);}else{best=Math.min(best,v);beta=Math.min(beta,v);}if(beta<=alpha)break;} return best;
     }
     function chooseMove(army,depth=2){
         syncFromBoard(); state.turn=army; const moves=legalMoves(state,army); if(!moves.length)return null;
-        // A fresh table keeps results specific to the current position and
-        // prevents stale entries from accumulating between computer moves.
-        transposition=new Map();
-        let best=-Infinity, candidates=[];
-        for(const m of moves){
-            const v=minimax(apply(state,m),Math.max(0,depth-1),-Infinity,Infinity,army);
-            if(v>best){best=v;candidates=[m];}
-            else if(v===best)candidates.push(m);
-        }
-        const chosen=candidates[Math.floor(Math.random()*candidates.length)];
-        chosen.type=state.board[chosen.fromRow][chosen.fromCol].type; return chosen;
+        let best=-Infinity, candidates=[]; for(const m of moves){const v=minimax(apply(state,m),Math.max(0,depth-1),-Infinity,Infinity,army);if(v>best){best=v;candidates=[m];}else if(v===best)candidates.push(m);} const chosen=candidates[Math.floor(Math.random()*candidates.length)]; chosen.type=state.board[chosen.fromRow][chosen.fromCol].type; return chosen;
     }
     function getState(){return clone(state);}
     return {syncFromBoard,chooseMove,getState,legalMoves};
