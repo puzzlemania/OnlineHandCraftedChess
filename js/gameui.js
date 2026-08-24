@@ -3,36 +3,24 @@
  Controls for human/computer play and game status.
 =========================================================*/
 const GameUI = (() => {
-    let computerEnabled=false, computerArmy='orange', depth=2, thinking=false;
-    function updateBoardOrientation(){
-        const board = document.getElementById('boardContainer');
-        if(!board) return;
-
-        // In Player vs Computer mode the human player's army is placed
-        // at the bottom of the board. The underlying row/column data is
-        // never changed; only the visual board is rotated.
-        const humanIsBlue = computerEnabled && computerArmy === 'orange';
-        board.classList.toggle('humanBlueOrientation', humanIsBlue);
-    }
-
+    let computerEnabled=false, computerArmy='orange', depth=3, thinking=false;
     function init(){
         const mode=document.getElementById('gameMode'), army=document.getElementById('computerArmy'), level=document.getElementById('engineLevel'), reset=document.getElementById('resetGame');
-        mode.addEventListener('change',()=>{
-            computerEnabled=mode.value==='computer';
-            updateBoardOrientation();
-            updateStatus();
-            maybeComputerTurn();
-        });
-        army.addEventListener('change',()=>{
-            computerArmy=army.value;
-            updateBoardOrientation();
-            updateStatus();
-            resetGame();
-        });
-        level.addEventListener('change',()=>{depth=Number(level.value);});
+        mode.addEventListener('change',()=>{computerEnabled=mode.value==='computer'; updatePerspective(); updateStatus(); maybeComputerTurn();});
+        army.addEventListener('change',()=>{computerArmy=army.value; updatePerspective(); updateStatus(); resetGame();});
+        level.addEventListener('change',()=>{depth={1:2,2:3,3:4}[Number(level.value)]||3;});
         reset.addEventListener('click',resetGame);
-        updateBoardOrientation();
-        updateStatus();
+        updatePerspective(); updateStatus();
+    }
+    function updatePerspective(){
+        const board=document.getElementById('boardContainer');
+        if(!board)return;
+        const flipped=computerEnabled && computerArmy==='orange';
+        board.classList.toggle('boardFlipped',flipped);
+        // When Blue is the human army, Blue is at the bottom of the
+        // visual board. When Orange is the human army, the board is
+        // flipped so Orange is at the bottom. Pieces are counter-rotated
+        // by CSS and therefore remain upright.
     }
     function setStatus(text){const el=document.getElementById('gameStatus');if(el)el.textContent=text;}
     function updateStatus(){
@@ -68,7 +56,7 @@ const GameUI = (() => {
         Game.finalizeMove({army:piece.dataset.army,type:m.type||piece.dataset.type,fromRow:m.fromRow,fromCol:m.fromCol,toRow:m.toRow,toCol:m.toCol,doublePawn:!!m.doublePawn,promotion:m.promotion||null});
     }
     function resetGame(){
-        Game.setGameOver(false); Game.clearLastMove(); Turn.init();
+        Game.setGameOver(false); Game.clearLastMove(); Turn.init(); updatePerspective();
         document.querySelectorAll('#boardOverlay .board-piece').forEach(p=>p.remove());
         document.querySelectorAll('#boardOverlay .cell').forEach(c=>{c.classList.remove('occupiedCell','activeCell');});
         Setup.init(); Engine.syncFromBoard(); updateStatus(); maybeComputerTurn();

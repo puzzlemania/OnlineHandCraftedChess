@@ -105,16 +105,78 @@ const Engine = (() => {
     }
     function evaluate(s,root){
         let score=0;
-        for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=s.board[r][c];if(!p)continue;let v=value[p.type];
-            const advance=p.type==='pawn'?(p.army==='blue'?r:7-r)*4:0;
+        const opponent=opp(root);
+        let rootBishopPair=0, oppBishopPair=0;
+        let rootMobility=0, oppMobility=0;
+
+        for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+            const p=s.board[r][c]; if(!p)continue;
+            let v=value[p.type];
+
+            // Development/advancement: reward pawns that make progress,
+            // while avoiding excessive preference for early pawn pushes.
+            const advance=p.type==='pawn'?(p.army==='blue'?r:7-r)*5:0;
+
+            // Central control is useful for every non-pawn piece.
             const center=(3.5-Math.abs(3.5-r))+(3.5-Math.abs(3.5-c));
-            v+=advance+(p.type!=='pawn'?center*2:0);
+            v+=advance+(p.type!=='pawn'?center*3:0);
+
+            // Reward developed minor pieces and discourage undeveloped
+            // back-rank pieces after the opening.
+            if((p.type==='horse'||p.type==='camel') && p.moved) v+=18;
+            if(p.type==='raja' && p.moved) v+=10;
+            if(p.type==='elephant' && p.moved) v+=5;
+
+            // Penalize isolated exposed kings mildly.
+            if(p.type==='raja' && !p.moved) v+=8;
+
             score+=(p.army===root?v:-v);
         }
+
+        // Mobility gives the engine a stronger positional preference.
+        for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+            const p=s.board[r][c]; if(!p)continue;
+            const count=pseudoMoves(s,r,c).length;
+            if(p.army===root) rootMobility+=count; else oppMobility+=count;
+        }
+        score += (rootMobility-oppMobility)*2;
+
+        // A pair of camels (bishops) is valuable.
+        for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+            const p=s.board[r][c]; if(!p)continue;
+            if(p.type==='camel'){
+                if(p.army===root)rootBishopPair++; else oppBishopPair++;
+            }
+        }
+        if(rootBishopPair>=2)score+=25;
+        if(oppBishopPair>=2)score-=25;
+
         return score;
     }
     function minimax(s,depth,alpha,beta,root){
-        const moves=legalMoves(s,s.turn); if(depth===0||moves.length===0){ if(moves.length===0){if(inCheck(s,s.turn))return s.turn===root?-999999-depth:999999+depth;return 0;} return evaluate(s,root); }
+        let moves=legalMoves(s,s.turn);
+        if(depth===0||moves.length===0){
+            if(moves.length===0){
+                if(inCheck(s,s.turn))return s.turn===root?-999999-depth:999999+depth;
+                return 0;
+            }
+            return evaluate(s,root);
+        }
+
+        // Search forcing moves first so alpha-beta pruning becomes much
+        // more effective at the stronger levels.
+        moves.sort((a,b)=>{
+            const score=m=>{
+                let v=0, target=s.board[m.toRow][m.toCol];
+                if(target) v+=1000+(value[target.type]||0);
+                if(m.promotion)v+=800+(value[m.promotion]||0);
+                if(m.enPassant)v+=1050;
+                if(m.castle)v+=40;
+                return v;
+            };
+            return score(b)-score(a);
+        });
+
         const maximizing=s.turn===root; let best=maximizing?-Infinity:Infinity;
         for(const m of moves){const n=apply(s,m),v=minimax(n,depth-1,alpha,beta,root);if(maximizing){best=Math.max(best,v);alpha=Math.max(alpha,v);}else{best=Math.min(best,v);beta=Math.min(beta,v);}if(beta<=alpha)break;} return best;
     }

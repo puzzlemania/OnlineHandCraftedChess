@@ -32,27 +32,19 @@ const Board = (() => {
     }
 
     function getCellFromPoint(x, y) {
-        // Resolve the cell from its CURRENT visual bounding rectangle.
-        // This remains correct after responsive resizing and after the
-        // board is rotated for Player vs Computer orientation.
-        //
-        // We intentionally do not calculate row/column from a cached
-        // board size: on tablets, especially after switching between
-        // portrait and landscape, that can leave stale coordinates.
+        // Do not depend solely on elementFromPoint(). On tablets in
+        // landscape orientation the board can be resized/repainted
+        // while a pointer gesture is in progress. Reading the live
+        // bounding rectangle of each cell keeps the mapping accurate
+        // after responsive resize or a 180-degree board rotation.
         for (const cell of cells) {
             const rect = cell.getBoundingClientRect();
-            if (
-                x >= rect.left && x <= rect.right &&
-                y >= rect.top && y <= rect.bottom
-            ) {
+            if (x >= rect.left && x <= rect.right &&
+                y >= rect.top && y <= rect.bottom) {
                 return cell;
             }
         }
-
-        // Fallback for browsers whose transformed element hit-testing
-        // behaves differently while a pointer is being captured.
-        const element = document.elementFromPoint(x, y);
-        return element ? element.closest(".cell") : null;
+        return null;
     }
 
     function highlight(cell) {

@@ -15,7 +15,6 @@ const DragDrop = (() => {
         if(Game.isGameOver()||!Turn.isPlayersTurn(army))return;
         dragPiece=piece; sourceCell=piece.parentElement;
         Rules.preparePiece(piece,sourceCell);
-        if (piece.setPointerCapture) { try { piece.setPointerCapture(event.pointerId); } catch (_) {} }
         document.body.appendChild(piece); Board.updateOccupied(sourceCell); beginDrag(event);
     }
     function beginDrag(event){
@@ -26,16 +25,26 @@ const DragDrop = (() => {
         // Keep the much smaller drag image centered under the pointer.
         offsetX=dragWidth/2;
         offsetY=dragHeight/2;
+        const flipped=document.getElementById('boardContainer')?.classList.contains('boardFlipped');
         Object.assign(dragPiece.style,{
             position:'fixed',
             left:(event.clientX-offsetX)+'px',
             top:(event.clientY-offsetY)+'px',
             width:dragWidth+'px',
             height:dragHeight+'px',
+            transform:flipped?'rotate(180deg)':'none',
             zIndex:'10000',
             pointerEvents:'none'
         });
-        window.addEventListener('pointermove',pointerMove,{passive:false});window.addEventListener('pointerup',pointerUp,{passive:false});window.addEventListener('pointercancel',pointerCancel,{passive:false});
+        // Listen on the window as well as the active pointer. This is
+        // important on tablets where the pointer may leave the original
+        // element during a landscape drag.
+        if (dragPiece.setPointerCapture && event.pointerId !== undefined) {
+            try { dragPiece.setPointerCapture(event.pointerId); } catch(e) {}
+        }
+        window.addEventListener('pointermove',pointerMove,{passive:false});
+        window.addEventListener('pointerup',pointerUp,{passive:false});
+        window.addEventListener('pointercancel',pointerUp,{passive:false});
     }
     function pointerMove(event){
         if(!dragging)return;
@@ -51,22 +60,12 @@ const DragDrop = (() => {
         dragging=false;
         window.removeEventListener('pointermove',pointerMove);
         window.removeEventListener('pointerup',pointerUp);
-        window.removeEventListener('pointercancel',pointerCancel);
+        window.removeEventListener('pointercancel',pointerUp);
         Board.clearHighlight();
         currentCell=Board.getCellFromPoint(event.clientX,event.clientY);
         if(!currentCell){cancelDrag();return;}
         if(!Rules.canMove(dragPiece,sourceCell,currentCell)){cancelDrag();return;}
         await completeDrop(currentCell);
-    }
-    function pointerCancel(event){
-        if(!dragging)return;
-        event.preventDefault();
-        dragging=false;
-        window.removeEventListener('pointermove',pointerMove);
-        window.removeEventListener('pointerup',pointerUp);
-        window.removeEventListener('pointercancel',pointerCancel);
-        Board.clearHighlight();
-        cancelDrag();
     }
     async function completeDrop(cell){
         const army=dragPiece.dataset.army, originalType=dragPiece.dataset.type;
@@ -94,7 +93,20 @@ const DragDrop = (() => {
         cleanup();
     }
     function cancelDrag(){if(sourceCell){sourceCell.appendChild(dragPiece);Board.updateOccupied(sourceCell);dragPiece.classList.remove('dragging');resetPieceStyle();}else if(dragPiece)dragPiece.remove();cleanup();}
-    function resetPieceStyle(){if(!dragPiece)return;Object.assign(dragPiece.style,{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%, -50%)',width:'88%',height:'88%',zIndex:'',pointerEvents:'auto'});}
+    function resetPieceStyle(){
+        if(!dragPiece)return;
+        const flipped=document.getElementById('boardContainer')?.classList.contains('boardFlipped');
+        Object.assign(dragPiece.style,{
+            position:'absolute',
+            left:'50%',
+            top:'50%',
+            transform:flipped?'translate(-50%, -50%) rotate(180deg)':'translate(-50%, -50%)',
+            width:'88%',
+            height:'88%',
+            zIndex:'',
+            pointerEvents:'auto'
+        });
+    }
     function cleanup(){dragPiece=null;sourceCell=null;currentCell=null;}
     return {init,attachBoardPiece};
 })();
