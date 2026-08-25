@@ -519,6 +519,34 @@ body{
 .activeTurn{box-shadow:0 0 18px rgba(96,255,174,.45), inset 0 0 10px rgba(96,255,174,.12);}
 
 
+
+
+/*=========================================================
+    Tablet / Phone Portrait Layout
+    In portrait orientation the side palettes are hidden so
+    the complete chess board remains visible and usable.
+    This rule is intentionally portrait-only; landscape
+    tablet layout and its working drag/drop behaviour remain
+    unchanged.
+=========================================================*/
+@media screen and (orientation:portrait) and (max-width:1100px){
+    #orangePanel,
+    #bluePanel{
+        display:none;
+    }
+
+    #gameContainer{
+        justify-content:center;
+        gap:0;
+        padding:0;
+    }
+
+    #boardContainer{
+        width:min(94vw,94vh);
+        max-width:94vw;
+    }
+}
+
 /*=========================================================
     Player Perspective
     In Player vs Computer the human army is always nearest
